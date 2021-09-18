@@ -27,6 +27,10 @@ from wolf.optim import ExponentialScheduler
 
 from experiments.options import parse_args
 
+from absl import app
+from absl import flags
+from ml_collections.config_flags import config_flags
+
 
 def is_master(rank):
     return rank <= 0
@@ -51,6 +55,8 @@ def get_optimizer(learning_rate, parameters, betas, eps, amsgrad, step_decay, we
 
 
 def setup(args):
+    import pdb
+    pdb.set_trace()
     def check_dataset():
         if dataset == 'cifar10':
             assert image_size == 32, 'CIFAR-10 expected image size 32 but got {}'.format(image_size)
@@ -483,7 +489,8 @@ def train(args, train_loader, train_index, train_sampler, val_loader, val_data, 
                        checkpoint_name)
 
 
-def main(args):
+def main(argv):
+    args = FLAGS.config
     args, (train_data, val_data), (train_index, val_index), wolf = setup(args)
 
     if is_master(args.rank):
@@ -500,7 +507,13 @@ def main(args):
     train(args, train_loader, train_index, train_sampler, val_loader, val_data, val_index, wolf)
 
 
+FLAGS = flags.FLAGS
+config_flags.DEFINE_config_file(
+    "config", None, "Training configuration.", lock_config=True)
+# flags.mark_flags_as_required(["workdir", "config_score", "mode"])
+flags.mark_flags_as_required(["config"])
 if __name__ == "__main__":
-    args = parse_args()
-    assert args.rank == -1 and args.local_rank == 0, 'single process should have wrong rank ({}) or local rank ({})'.format(args.rank, args.local_rank)
-    main(args)
+    app.run(main)
+
+    # assert args.rank == -1 and args.local_rank == 0, 'single process should have wrong rank ({}) or local rank ({})'.format(args.rank, args.local_rank)
+    # main(args, FLAGS.config)
